@@ -1,132 +1,95 @@
 
 import { test, expect } from '@playwright/test';
+import { LoginPage } from '../pages/LoginPage.js';
+import { NavigationPage } from '../pages/NavigationPage.js';
 import { logoutIfPossible } from './test-helpers.js';
 
-test.describe('SauceDemo - Navigation Tests', () => {
+test.describe('SauceDemo - Navigation Tests using POM', () => {
+
+  let loginPage;
+  let navigationPage;
 
   test.beforeEach(async ({ page }) => {
+    loginPage = new LoginPage(page);
+    navigationPage = new NavigationPage(page);
 
-    await page.goto('https://www.saucedemo.com/');
+    // Login
+    await loginPage.navigateToLoginPage();
+    await loginPage.login('standard_user', 'secret_sauce');
 
-    await page.locator('[data-test="username"]')
-      .fill('standard_user');
+    await expect(page).toHaveURL(/inventory/);
+  });
 
-    await page.locator('[data-test="password"]')
-      .fill('secret_sauce');
+  test('TC060 - Open side menu', async () => {
+    await navigationPage.openMenu();
 
-    await page.locator('[data-test="login-button"]').click();
+    await expect(navigationPage.logoutLink).toBeVisible();
+  });
+
+  test('TC061 - Close side menu', async () => {
+    await navigationPage.openMenu();
+
+    await navigationPage.closeMenu();
+
+    await expect(navigationPage.logoutLink).toBeHidden();
+  });
+
+  test('TC062 - Navigate to All Items', async ({ page }) => {
+    await navigationPage.openMenu();
+
+    await navigationPage.clickAllItems();
 
     await expect(page).toHaveURL(/inventory/);
 
-  });
-
-  // TC060 - Open side menu
-  test('Open side menu', async ({ page }) => {
-
-    await page.locator('#react-burger-menu-btn').click();
-
-    await expect(
-      page.locator('#logout_sidebar_link')
-    ).toBeVisible();
-
-  });
-
-  // TC061 - Close side menu
-  test('Close side menu', async ({ page }) => {
-
-    await page.locator('#react-burger-menu-btn').click();
-
-    await page.locator('#react-burger-cross-btn').click();
-
-    await expect(
-      page.locator('#logout_sidebar_link')
-    ).toBeHidden();
-
-  });
-
-  // TC062 - All Items navigation
-  test('Navigate to All Items', async ({ page }) => {
-
-    await page.locator('#react-burger-menu-btn').click();
-
-    await page.locator('#inventory_sidebar_link').click();
-
-    await expect(page).toHaveURL(/inventory/);
-
-    await expect(page.locator('.title'))
+    await expect(navigationPage.pageTitle)
       .toHaveText('Products');
-
   });
 
-  // TC063 - About navigation
-  test('Navigate to About page', async ({ page }) => {
+  test('TC063 - Navigate to About page', async ({ page }) => {
+    await navigationPage.openMenu();
 
-    await page.locator('#react-burger-menu-btn').click();
+    await navigationPage.clickAbout();
 
-    await page.locator('#about_sidebar_link').click();
-
-    await expect(page).toHaveURL(/saucelabs/);
-
+    await expect(page).toHaveURL(/saucelabs/i);
   });
 
-  // TC064 - Logout
-  test('Logout successfully', async ({ page }) => {
-
-    await page.locator('#react-burger-menu-btn').click();
-
-    await page.locator('#logout_sidebar_link').click();
+  test('TC064 - Logout successfully', async ({ page }) => {
+    await navigationPage.logout();
 
     await expect(page).toHaveURL('https://www.saucedemo.com/');
 
-    await expect(
-      page.locator('[data-test="login-button"]')
-    ).toBeVisible();
-
+    await expect(navigationPage.loginButton).toBeVisible();
   });
 
-  // TC065 - Browser refresh
-  test('Refresh products page', async ({ page }) => {
-
-    await page.reload();
+  test('TC065 - Refresh products page', async ({ page }) => {
+    await navigationPage.refreshPage();
 
     await expect(page).toHaveURL(/inventory/);
 
-    await expect(page.locator('.title'))
+    await expect(navigationPage.pageTitle)
       .toHaveText('Products');
-
   });
 
-  // TC066 - Browser back button
-  test('Browser back button navigation', async ({ page }) => {
-
-    await page.locator('[data-test="shopping-cart-link"]').click();
+  test('TC066 - Browser back button navigation', async ({ page }) => {
+    await navigationPage.openCart();
 
     await expect(page).toHaveURL(/cart/);
 
-    await page.goBack();
+    await navigationPage.goBack();
 
     await expect(page).toHaveURL(/inventory/);
-
   });
 
-  // TC067 - Direct inventory access without login
-  test('Prevent unauthenticated inventory access', async ({ page }) => {
+  test('TC067 - Prevent unauthenticated inventory access', async ({ page }) => {
+    await navigationPage.logout();
 
-    await page.locator('#react-burger-menu-btn').click();
-
-    await page.locator('#logout_sidebar_link').click();
-
-    await page.goto('https://www.saucedemo.com/inventory.html');
+    await navigationPage.openInventoryDirectly();
 
     await expect(page).toHaveURL('https://www.saucedemo.com/');
-
   });
 
-  // AFTER EACH
   test.afterEach(async ({ page }) => {
-
     await logoutIfPossible(page);
-
   });
 
 });

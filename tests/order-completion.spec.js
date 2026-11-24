@@ -1,93 +1,90 @@
 
 import { test, expect } from '@playwright/test';
+import { InventoryPage } from '../pages/InventoryPage.js';
+import { CartPage } from '../pages/CartPage.js';
+import { CheckoutPage } from '../pages/CheckoutPage.js';
 import { logoutIfPossible } from './test-helpers.js';
 
 test.describe('SauceDemo - Order Completion Tests', () => {
 
+  let inventoryPage;
+  let cartPage;
+  let checkoutPage;
+
   test.beforeEach(async ({ page }) => {
+    inventoryPage = new InventoryPage(page);
+    cartPage = new CartPage(page);
+    checkoutPage = new CheckoutPage(page);
 
-    await page.goto('https://www.saucedemo.com/');
+    // Login
+    await inventoryPage.login();
 
-    await page.locator('[data-test="username"]')
-      .fill('standard_user');
+    // Add product to cart
+    await inventoryPage.addProductToCart('sauce-labs-backpack');
 
-    await page.locator('[data-test="password"]')
-      .fill('secret_sauce');
+    // Open shopping cart
+    await inventoryPage.openCart();
 
-    await page.locator('[data-test="login-button"]').click();
+    // Proceed to checkout
+    await cartPage.proceedToCheckout();
 
-    await page.locator(
-      '[data-test="add-to-cart-sauce-labs-backpack"]'
-    ).click();
+    // Enter customer information
+    await checkoutPage.enterCustomerInformation(
+      'John',
+      'Smith',
+      '1207'
+    );
 
-    await page.locator(
-      '[data-test="shopping-cart-link"]'
-    ).click();
-
-    await page.locator('[data-test="checkout"]').click();
-
-    await page.locator('[data-test="firstName"]').fill('John');
-    await page.locator('[data-test="lastName"]').fill('Smith');
-    await page.locator('[data-test="postalCode"]').fill('1207');
-
-    await page.locator('[data-test="continue"]').click();
-
+    // Continue to order overview
+    await checkoutPage.continueCheckout();
   });
 
-  test('TC053 - Verify Finish button', async ({ page }) => {
-    await expect(page.locator('[data-test="finish"]')).toBeVisible();
+  test('TC053 - Verify Finish button', async () => {
+    await expect(checkoutPage.finishButton).toBeVisible();
   });
 
   test('TC054 - Complete an order', async ({ page }) => {
-
-    await page.locator('[data-test="finish"]').click();
+    await checkoutPage.finishOrder();
 
     await expect(page).toHaveURL(/checkout-complete/);
   });
 
-  test('TC055 - Verify confirmation message', async ({ page }) => {
+  test('TC055 - Verify confirmation message', async () => {
+    await checkoutPage.finishOrder();
 
-    await page.locator('[data-test="finish"]').click();
-
-    await expect(page.locator('.complete-header'))
+    await expect(checkoutPage.confirmationMessage)
       .toHaveText('Thank you for your order!');
   });
 
-  test('TC056 - Verify confirmation description', async ({ page }) => {
+  test('TC056 - Verify confirmation description', async () => {
+    await checkoutPage.finishOrder();
 
-    await page.locator('[data-test="finish"]').click();
-
-    await expect(page.locator('.complete-text'))
+    await expect(checkoutPage.confirmationDescription)
       .toContainText('Your order has been dispatched');
   });
 
-  test('TC057 - Verify confirmation page title', async ({ page }) => {
+  test('TC057 - Verify confirmation page title', async () => {
+    await checkoutPage.finishOrder();
 
-    await page.locator('[data-test="finish"]').click();
-
-    await expect(page.locator('.title'))
+    await expect(checkoutPage.pageTitle)
       .toHaveText('Checkout: Complete!');
   });
 
   test('TC058 - Back Home navigation', async ({ page }) => {
+    await checkoutPage.finishOrder();
 
-    await page.locator('[data-test="finish"]').click();
-
-    await page.locator('[data-test="back-to-products"]').click();
+    await checkoutPage.backToProducts();
 
     await expect(page).toHaveURL(/inventory/);
 
-    await expect(page.locator('.title'))
+    await expect(inventoryPage.pageTitle)
       .toHaveText('Products');
   });
 
-  test('TC059 - Verify cart after order completion', async ({ page }) => {
+  test('TC059 - Verify cart after order completion', async () => {
+    await checkoutPage.finishOrder();
 
-    await page.locator('[data-test="finish"]').click();
-
-    await expect(
-      page.locator('[data-test="shopping-cart-badge"]')
-    ).toHaveCount(0);
+    await expect(inventoryPage.cartBadge).toHaveCount(0);
   });
 
   test.afterEach(async ({ page }) => {

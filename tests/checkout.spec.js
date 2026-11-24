@@ -1,136 +1,145 @@
 
 import { test, expect } from '@playwright/test';
+import { InventoryPage } from '../pages/InventoryPage.js';
+import { CartPage } from '../pages/CartPage.js';
+import { CheckoutPage } from '../pages/CheckoutPage.js';
 import { logoutIfPossible } from './test-helpers.js';
 
 test.describe('SauceDemo - Checkout Tests', () => {
 
+  let inventoryPage;
+  let cartPage;
+  let checkoutPage;
+
   test.beforeEach(async ({ page }) => {
+    inventoryPage = new InventoryPage(page);
+    cartPage = new CartPage(page);
+    checkoutPage = new CheckoutPage(page);
 
-    await page.goto('https://www.saucedemo.com/');
+    // Login
+    await inventoryPage.login();
 
-    await page.locator('[data-test="username"]')
-      .fill('standard_user');
+    // Add product to cart
+    await inventoryPage.addProductToCart('sauce-labs-backpack');
 
-    await page.locator('[data-test="password"]')
-      .fill('secret_sauce');
+    // Open cart
+    await inventoryPage.openCart();
 
-    await page.locator('[data-test="login-button"]').click();
-
-    await page.locator(
-      '[data-test="add-to-cart-sauce-labs-backpack"]'
-    ).click();
-
-    await page.locator(
-      '[data-test="shopping-cart-link"]'
-    ).click();
-
-    await page.locator('[data-test="checkout"]').click();
-
+    // Proceed to checkout
+    await cartPage.proceedToCheckout();
   });
 
   test('TC043 - Verify checkout page', async ({ page }) => {
     await expect(page).toHaveURL(/checkout-step-one/);
-    await expect(page.locator('.title'))
+
+    await expect(checkoutPage.pageTitle)
       .toHaveText('Checkout: Your Information');
   });
 
-  test('TC044 - Verify checkout fields', async ({ page }) => {
-    await expect(page.locator('[data-test="firstName"]')).toBeVisible();
-    await expect(page.locator('[data-test="lastName"]')).toBeVisible();
-    await expect(page.locator('[data-test="postalCode"]')).toBeVisible();
+  test('TC044 - Verify checkout fields', async () => {
+    await expect(checkoutPage.firstNameInput).toBeVisible();
+    await expect(checkoutPage.lastNameInput).toBeVisible();
+    await expect(checkoutPage.postalCodeInput).toBeVisible();
   });
 
   test('TC045 - Valid customer information', async ({ page }) => {
+    await checkoutPage.enterCustomerInformation(
+      'John',
+      'Smith',
+      '1207'
+    );
 
-    await page.locator('[data-test="firstName"]').fill('John');
-    await page.locator('[data-test="lastName"]').fill('Smith');
-    await page.locator('[data-test="postalCode"]').fill('1207');
-
-    await page.locator('[data-test="continue"]').click();
+    await checkoutPage.continueCheckout();
 
     await expect(page).toHaveURL(/checkout-step-two/);
   });
 
-  test('TC046 - Empty first name', async ({ page }) => {
+  test('TC046 - Empty first name', async () => {
+    await checkoutPage.enterCustomerInformation(
+      '',
+      'Smith',
+      '1207'
+    );
 
-    await page.locator('[data-test="lastName"]').fill('Smith');
-    await page.locator('[data-test="postalCode"]').fill('1207');
+    await checkoutPage.continueCheckout();
 
-    await page.locator('[data-test="continue"]').click();
-
-    await expect(page.locator('[data-test="error"]'))
+    await expect(checkoutPage.errorMessage)
       .toContainText('First Name is required');
   });
 
-  test('TC047 - Empty last name', async ({ page }) => {
+  test('TC047 - Empty last name', async () => {
+    await checkoutPage.enterCustomerInformation(
+      'John',
+      '',
+      '1207'
+    );
 
-    await page.locator('[data-test="firstName"]').fill('John');
-    await page.locator('[data-test="postalCode"]').fill('1207');
+    await checkoutPage.continueCheckout();
 
-    await page.locator('[data-test="continue"]').click();
-
-    await expect(page.locator('[data-test="error"]'))
+    await expect(checkoutPage.errorMessage)
       .toContainText('Last Name is required');
   });
 
-  test('TC048 - Empty postal code', async ({ page }) => {
+  test('TC048 - Empty postal code', async () => {
+    await checkoutPage.enterCustomerInformation(
+      'John',
+      'Smith',
+      ''
+    );
 
-    await page.locator('[data-test="firstName"]').fill('John');
-    await page.locator('[data-test="lastName"]').fill('Smith');
+    await checkoutPage.continueCheckout();
 
-    await page.locator('[data-test="continue"]').click();
-
-    await expect(page.locator('[data-test="error"]'))
+    await expect(checkoutPage.errorMessage)
       .toContainText('Postal Code is required');
   });
 
-  test('TC049 - All fields empty', async ({ page }) => {
+  test('TC049 - All fields empty', async () => {
+    await checkoutPage.continueCheckout();
 
-    await page.locator('[data-test="continue"]').click();
-
-    await expect(page.locator('[data-test="error"]'))
+    await expect(checkoutPage.errorMessage)
       .toContainText('First Name is required');
   });
 
   test('TC050 - Cancel checkout', async ({ page }) => {
-
-    await page.locator('[data-test="cancel"]').click();
+    await checkoutPage.cancelCheckout();
 
     await expect(page).toHaveURL(/cart/);
   });
 
-  test('TC051 - Verify order summary', async ({ page }) => {
+  test('TC051 - Verify order summary', async () => {
+    await checkoutPage.enterCustomerInformation(
+      'John',
+      'Smith',
+      '1207'
+    );
 
-    await page.locator('[data-test="firstName"]').fill('John');
-    await page.locator('[data-test="lastName"]').fill('Smith');
-    await page.locator('[data-test="postalCode"]').fill('1207');
+    await checkoutPage.continueCheckout();
 
-    await page.locator('[data-test="continue"]').click();
+    await expect(checkoutPage.orderItems).toHaveCount(1);
 
-    await expect(page.locator('.cart_item')).toHaveCount(1);
-
-    await expect(page.locator('.inventory_item_name'))
+    await expect(checkoutPage.orderProductNames)
       .toHaveText('Sauce Labs Backpack');
 
-    await expect(page.locator('.inventory_item_price'))
+    await expect(checkoutPage.orderProductPrices)
       .toHaveText('$29.99');
   });
 
-  test('TC052 - Verify total price calculation', async ({ page }) => {
+  test('TC052 - Verify total price calculation', async () => {
+    await checkoutPage.enterCustomerInformation(
+      'John',
+      'Smith',
+      '1207'
+    );
 
-    await page.locator('[data-test="firstName"]').fill('John');
-    await page.locator('[data-test="lastName"]').fill('Smith');
-    await page.locator('[data-test="postalCode"]').fill('1207');
+    await checkoutPage.continueCheckout();
 
-    await page.locator('[data-test="continue"]').click();
-
-    await expect(page.locator('.summary_subtotal_label'))
+    await expect(checkoutPage.subtotal)
       .toHaveText('Item total: $29.99');
 
-    await expect(page.locator('.summary_tax_label'))
+    await expect(checkoutPage.tax)
       .toHaveText('Tax: $2.40');
 
-    await expect(page.locator('.summary_total_label'))
+    await expect(checkoutPage.total)
       .toHaveText('Total: $32.39');
   });
 
