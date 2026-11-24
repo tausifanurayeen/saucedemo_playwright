@@ -20,11 +20,6 @@ export default defineConfig({
     // Show browser
     headless: false,
 
-    // Slow down every browser action
-    launchOptions: {
-      slowMo: 1200,
-    },
-
     // Capture screenshots when tests fail
     screenshot: 'only-on-failure',
 
@@ -35,7 +30,15 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: null,
+        deviceScaleFactor: undefined,
+        launchOptions: {
+          slowMo: 1200,
+          args: ['--start-maximized']
+        },
+      },
     },
 
     // Enable these later for cross-browser testing

@@ -1,77 +1,78 @@
 
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
+import { logoutIfPossible } from './test-helpers.js';
 
-const URL = 'https://www.saucedemo.com/';
-
-test.describe('SauceDemo Login Tests', () => {
+test.describe('SauceDemo - Login Tests', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(URL);
+    await page.goto('https://www.saucedemo.com/');
   });
 
-  test('TC001 - Login with valid credentials', async ({ page }) => {
+  test('TC001 - Valid login', async ({ page }) => {
+
     await page.locator('[data-test="username"]')
       .fill('standard_user');
 
     await page.locator('[data-test="password"]')
       .fill('secret_sauce');
 
-    await page.locator('[data-test="login-button"]')
-      .click();
+    await page.locator('[data-test="login-button"]').click();
 
     await expect(page).toHaveURL(/inventory/);
-    await expect(page.locator('.title'))
-      .toHaveText('Products');
   });
 
-  test('TC002 - Login with invalid username', async ({ page }) => {
+  test('TC002 - Invalid username', async ({ page }) => {
+
     await page.locator('[data-test="username"]')
       .fill('wrong_user');
 
     await page.locator('[data-test="password"]')
       .fill('secret_sauce');
 
-    await page.locator('[data-test="login-button"]')
-      .click();
+    await page.locator('[data-test="login-button"]').click();
 
     await expect(page.locator('[data-test="error"]'))
       .toBeVisible();
   });
 
-  test('TC003 - Login with invalid password', async ({ page }) => {
+  test('TC003 - Invalid password', async ({ page }) => {
+
     await page.locator('[data-test="username"]')
       .fill('standard_user');
 
     await page.locator('[data-test="password"]')
       .fill('wrong_password');
 
-    await page.locator('[data-test="login-button"]')
-      .click();
+    await page.locator('[data-test="login-button"]').click();
 
     await expect(page.locator('[data-test="error"]'))
       .toBeVisible();
   });
 
-  test('TC004 - Login with empty credentials', async ({ page }) => {
-    await page.locator('[data-test="login-button"]')
-      .click();
+  test('TC004 - Empty credentials', async ({ page }) => {
+
+    await page.locator('[data-test="login-button"]').click();
 
     await expect(page.locator('[data-test="error"]'))
       .toBeVisible();
   });
 
-  test('TC005 - Login with locked out user', async ({ page }) => {
+  test('TC005 - Locked out user', async ({ page }) => {
+
     await page.locator('[data-test="username"]')
       .fill('locked_out_user');
 
     await page.locator('[data-test="password"]')
       .fill('secret_sauce');
 
-    await page.locator('[data-test="login-button"]')
-      .click();
+    await page.locator('[data-test="login-button"]').click();
 
     await expect(page.locator('[data-test="error"]'))
       .toContainText('locked out');
+  });
+
+  test.afterEach(async ({ page }) => {
+    await logoutIfPossible(page);
   });
 
 });

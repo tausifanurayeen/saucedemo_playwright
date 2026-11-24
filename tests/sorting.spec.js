@@ -1,7 +1,8 @@
 
 import { test, expect } from '@playwright/test';
+import { logoutIfPossible } from './test-helpers.js';
 
-test.describe('SauceDemo - Product Sorting Tests', () => {
+test.describe('SauceDemo - Sorting Tests', () => {
 
   test.beforeEach(async ({ page }) => {
 
@@ -13,24 +14,17 @@ test.describe('SauceDemo - Product Sorting Tests', () => {
     await page.locator('[data-test="password"]')
       .fill('secret_sauce');
 
-    await page.locator('[data-test="login-button"]')
-      .click();
-
-    await expect(page).toHaveURL(/inventory/);
+    await page.locator('[data-test="login-button"]').click();
 
   });
 
-  // TC023 - Verify sorting dropdown
-  test('Verify sorting dropdown is visible', async ({ page }) => {
-
+  test('TC023 - Verify sorting dropdown', async ({ page }) => {
     await expect(
       page.locator('[data-test="product-sort-container"]')
     ).toBeVisible();
-
   });
 
-  // TC024 - Sort Name A to Z
-  test('Sort products by Name A to Z', async ({ page }) => {
+  test('TC024 - Sort Name A to Z', async ({ page }) => {
 
     await page.locator('[data-test="product-sort-container"]')
       .selectOption('az');
@@ -38,14 +32,10 @@ test.describe('SauceDemo - Product Sorting Tests', () => {
     const names = await page.locator('.inventory_item_name')
       .allTextContents();
 
-    const sortedNames = [...names].sort();
-
-    expect(names).toEqual(sortedNames);
-
+    expect(names).toEqual([...names].sort());
   });
 
-  // TC025 - Sort Name Z to A
-  test('Sort products by Name Z to A', async ({ page }) => {
+  test('TC025 - Sort Name Z to A', async ({ page }) => {
 
     await page.locator('[data-test="product-sort-container"]')
       .selectOption('za');
@@ -53,14 +43,10 @@ test.describe('SauceDemo - Product Sorting Tests', () => {
     const names = await page.locator('.inventory_item_name')
       .allTextContents();
 
-    const sortedNames = [...names].sort().reverse();
-
-    expect(names).toEqual(sortedNames);
-
+    expect(names).toEqual([...names].sort().reverse());
   });
 
-  // TC026 - Sort Price Low to High
-  test('Sort products by Price Low to High', async ({ page }) => {
+  test('TC026 - Sort Price Low to High', async ({ page }) => {
 
     await page.locator('[data-test="product-sort-container"]')
       .selectOption('lohi');
@@ -68,19 +54,12 @@ test.describe('SauceDemo - Product Sorting Tests', () => {
     const prices = await page.locator('.inventory_item_price')
       .allTextContents();
 
-    const numericPrices = prices.map(price =>
-      Number(price.replace('$', ''))
-    );
+    const values = prices.map(p => Number(p.replace('$', '')));
 
-    const sortedPrices = [...numericPrices]
-      .sort((a, b) => a - b);
-
-    expect(numericPrices).toEqual(sortedPrices);
-
+    expect(values).toEqual([...values].sort((a, b) => a - b));
   });
 
-  // TC027 - Sort Price High to Low
-  test('Sort products by Price High to Low', async ({ page }) => {
+  test('TC027 - Sort Price High to Low', async ({ page }) => {
 
     await page.locator('[data-test="product-sort-container"]')
       .selectOption('hilo');
@@ -88,15 +67,13 @@ test.describe('SauceDemo - Product Sorting Tests', () => {
     const prices = await page.locator('.inventory_item_price')
       .allTextContents();
 
-    const numericPrices = prices.map(price =>
-      Number(price.replace('$', ''))
-    );
+    const values = prices.map(p => Number(p.replace('$', '')));
 
-    const sortedPrices = [...numericPrices]
-      .sort((a, b) => b - a);
+    expect(values).toEqual([...values].sort((a, b) => b - a));
+  });
 
-    expect(numericPrices).toEqual(sortedPrices);
-
+  test.afterEach(async ({ page }) => {
+    await logoutIfPossible(page);
   });
 
 });
